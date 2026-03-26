@@ -1,16 +1,81 @@
-# React + Vite
+# HuntMaster – Your trusted job hunting companion
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+HuntMaster is a lightweight, privacy-first browser extension that helps job seekers capture, organize, and track job applications directly in the browser. Say goodbye to scattered notes, lost links, and forgotten follow-ups.
 
-Currently, two official plugins are available:
+Manifest V3 compatible; works in Microsoft Edge, Chrome & compatible browsers, it offers one-click job scraping, a beautiful dashboard with real-time stats, status tracking, and secure local storage — all without accounts or external servers.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Microsoft Edge Add-ons Store Link: [HuntMaster](https://microsoftedge.microsoft.com/addons/detail/huntmaster/lnkkblgjhambifbiclmmimgjjffpllee)
 
-## React Compiler
+## Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Smart One-Click Job Capture**  
+  Automatically extract job title, company, location, description, URL, and more from LinkedIn, Indeed, Glassdoor, and other major job boards.
 
-## Expanding the ESLint configuration
+- **Comprehensive Dashboard**  
+  Clean overview of all applications with real-time statistics:  
+  - Wishlist  
+  - Applied  
+  - Interviewing  
+  - Offers  
+  - Rejected  
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Flexible Status & Management**  
+  Update application status easily (Wishlist → Applied → Interviewing → Offer → Rejected).  
+  Edit details, add notes, set application dates, and delete entries.
+
+- **Convenient Side Panel**  
+  Quick access for scanning pages, manual entry, and viewing recent jobs without opening a full popup.
+
+- **Secure & Private**  
+  All data is stored **locally** in the browser — nothing is sent to external servers.  
+  Optional sync across your devices via browser sync.
+
+- **Modern, Responsive UI**  
+  Built with React, Vite, and Tailwind CSS — smooth hover effects, clean cards, dark/light mode support.
+
+- **Direct Links & Full Descriptions**  
+  Click any job to view the full saved description or jump back to the original posting.
+
+## Installation
+
+### Microsoft Edge
+
+1. Visit the **Microsoft Edge Add-ons Store**.
+2. Search for **HuntMaster**.
+3. Click **Get** to install.
+
+### Development mode
+```bash
+# Clone the repository
+git clone https://github.com/Joseph-kdev/job-tracker-extension.git
+cd job-tracker-extension
+
+# Install dependencies
+npm install
+
+# Start dev server with hot module replacement
+npm run dev
+
+# Create production build (outputs to dist/)
+npm run build
+```
+Load in Browser (Edge / Chrome):
+- Run npm run build (or use the dist folder after dev build).
+- Open Edge → edge://extensions/
+- Enable Developer mode (top right)
+- Click Load unpacked → select the dist folder
+- The extension should now appear in your toolbar!
+
+## Tech Stack
+- Manifest V3
+- React
+- Tailwind CSS
+- Browser Storage API
+
+## Contributing
+
+Issues and pull requests are welcome. If you identify extraction edge cases on specific job boards, feel free to submit improvements.
+
+## Licence
+MIT
+
