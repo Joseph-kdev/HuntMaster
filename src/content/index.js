@@ -1,5 +1,3 @@
-console.log('Job Tracker content script loaded');
-
 if (!window.JOB_TRACKER_LOADED) {
     window.JOB_TRACKER_LOADED = true;
 

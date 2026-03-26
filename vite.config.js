@@ -1,18 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { crx, defineManifest } from '@crxjs/vite-plugin'
-import { resolve } from 'path'
 
 const manifest = defineManifest({
   manifest_version: 3,
-  name: "Job Application Tracker",
+  name: "HuntMaster",
   version: "1.0.0",
-  description: "Track your job applications automatically.",
+  description: "Your trusted job hunting companion.",
   permissions: [
     "storage",
     "activeTab",
     "scripting",
-    "sidePanel"
+    "sidePanel",
+    "tabs"
   ],
   background: {
     service_worker: "src/background/index.js",
@@ -26,6 +26,10 @@ const manifest = defineManifest({
   ],
   side_panel: {
     default_path: "src/sidepanel/index.html"
+  },
+  options_ui: {
+    page: "src/dashboard/index.html",
+    open_in_tab: true
   },
   action: {
     default_title: "Open Job Tracker"
