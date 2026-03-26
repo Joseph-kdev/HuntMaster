@@ -120,6 +120,7 @@ export default function Dashboard() {
                   <th className="p-4 font-semibold">Company</th>
                   <th className="p-4 font-semibold">Role</th>
                   <th className="p-4 font-semibold">Status</th>
+                  <th className="p-4 font-semibold">Skills identified</th>
                   <th className="p-4 font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -166,6 +167,13 @@ export default function Dashboard() {
                           <option value="Offer">Offer</option>
                           <option value="Rejected">Rejected</option>
                         </select>
+                      </td>
+                      <td className="p-4 text-xs text-gray-600 dark:text-gray-300">
+                        {job.aiSkills
+                          ? `${(job.aiSkills.technicalSkills?.length || 0) +
+                              (job.aiSkills.softSkills?.length || 0) +
+                              (job.aiSkills.niceToHave?.length || 0)} skills`
+                          : "None"}
                       </td>
                       <td className="p-4 flex gap-2">
                         <button
@@ -248,6 +256,41 @@ export default function Dashboard() {
                 {selectedJob.description ||
                   "No description available for this job."}
               </div>
+
+              {selectedJob.aiSkills ? (
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                  <p className="text-sm font-semibold text-blue-700 dark:text-blue-200">
+                    AI Extracted Skills
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    {selectedJob.aiSkills.summary}
+                  </p>
+                  <div className="mt-2 text-xs text-gray-700 dark:text-gray-200">
+                    <div>
+                      <strong>Experience Level:</strong>{" "}
+                      {selectedJob.aiSkills.experienceLevel || "Unknown"}
+                    </div>
+                    <div>
+                      <strong>Technical:</strong>{" "}
+                      {selectedJob.aiSkills.technicalSkills?.join(", ") || "—"}
+                    </div>
+                    <div>
+                      <strong>Soft:</strong>{" "}
+                      {selectedJob.aiSkills.softSkills?.join(", ") || "—"}
+                    </div>
+                    <div>
+                      <strong>Nice to Have:</strong>{" "}
+                      {selectedJob.aiSkills.niceToHave?.join(", ") || "—"}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    No AI skills extracted for this job. Stored description is shown above.
+                  </p>
+                </div>
+              )}
 
               <div className="mt-6 pt-6 border-t dark:border-gray-700">
                 <a

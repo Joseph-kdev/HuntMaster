@@ -115,9 +115,13 @@ export default function SidePanel() {
     try {
       const result = await chrome.storage.local.get(["jobs"]);
       const jobs = result.jobs || [];
+      const descriptionToStore = skills ? skills.summary || "" : jobDetails.description;
       const newJob = {
         ...jobDetails,
+        description: descriptionToStore,
+        rawDescription: jobDetails.description,
         extractSkills: skills ?? null,
+        aiSkills: skills ?? null,
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       };
