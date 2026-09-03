@@ -1,11 +1,17 @@
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, LogOut, Trash2, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
+import AuthPage from "./AuthPage";
+import { logOut, subscribeToAuth } from "../services/auth";
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
+  const [user, setUser] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
 
   const [selectedJob, setSelectedJob] = useState(null);
   const [jobToDelete, setJobToDelete] = useState(null);
+
+  useEffect(() => subscribeToAuth(setUser), []);
 
   useEffect(() => {
     // Fetch initial jobs
@@ -69,38 +75,86 @@ export default function Dashboard() {
     wishlist: jobs.filter((j) => j.status == "Wishlist").length,
   };
 
+  if (showAuth) {
+    return (
+      <AuthPage
+        onBack={() => setShowAuth(false)}
+        onSuccess={() => setShowAuth(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-8 font-sans">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-4 border-b pb-4 dark:border-gray-700">
-          <h1 className="text-3xl font-bold text-blue-600">
-            HuntMaster Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Track and manage your job applications.
-          </p>
+        <header className="mb-4 flex flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-start">
+          <div>
+            <h1 className="text-2xl font-bold text-grey-200">
+              HuntMaster Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Track and manage your job applications.
+            </p>
+          </div>
+          <div className="flex flex-col items-stretch sm:items-end">
+            {user ? (
+              <div className="flex items-center gap-3 text-sm text-gray-300">
+                <span className="flex items-center gap-2" title={user.email}>
+                  <UserRound className="h-4 w-4 text-blue-400" />
+                  <span className="max-w-48 truncate">{user.email}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={logOut}
+                  className="flex items-center gap-2 rounded-sm bg-gray-600 px-3 py-2 font-semibold text-gray-200 shadow-[0_5px_0_#2e2e2ed4] transition hover:bg-gray-500 active:translate-y-1 active:shadow-none"
+                >
+                  <LogOut className="h-4 w-4" /> Log out
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowAuth(true)}
+                  className="rounded bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_0_#1e3a8a] transition hover:bg-blue-600 active:translate-y-1.5 active:shadow-none"
+                >
+                  Enable Cloud Sync
+                </button>
+                <p className="mt-2 text-right text-xs text-gray-400">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowAuth(true)}
+                    className="text-blue-400 underline-offset-2 hover:text-blue-300 hover:underline"
+                  >
+                    Log in
+                  </button>
+                </p>
+              </>
+            )}
+          </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-4">
-          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow border-l-4 border-white hover:bg-[url('/hideout.svg')]">
+          <div className="p-6 bg-gray-600 rounded-lg shadow hover:bg-[url('/hideout.svg')] border border-gray-200 ring-gray-50 hover:-translate-y-1">
             <h2 className="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
               Wishlist
             </h2>
             <p className="text-3xl font-bold">{stats.wishlist}</p>
           </div>
-          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow border-l-4 border-blue-500">
+          <div className="p-6 bg-blue-400/40 rounded-lg shadow border border-blue-600 hover:-translate-y-1">
             <h2 className="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
               Applied
             </h2>
             <p className="text-3xl font-bold">{stats.applied}</p>
           </div>
-          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow border-l-4 border-yellow-500">
+          <div className="p-6 bg-orange-400/40 rounded-lg shadow border border-orange-300 ring-orange-400 hover:-translate-y-1">
             <h2 className="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
               Interviewing
             </h2>
             <p className="text-3xl font-bold">{stats.interviewing}</p>
           </div>
-          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow border-l-4 border-green-500">
+          <div className="p-6 bg-green-500/40 rounded-lg shadow border border-green-400 ring-green-400 hover:-translate-y-1">
             <h2 className="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
               Offers
             </h2>
@@ -108,14 +162,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b dark:border-gray-700">
+        <div className="rounded-xl shadow overflow-hidden">
+          <div className="py-4 text-gray-300">
             <h2 className="text-xl font-bold">Recent Applications</h2>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-t-xl">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-700 text-sm uppercase text-gray-500 dark:text-gray-300">
+                <tr className="bg-gray-50 dark:bg-gray-700 text-sm uppercase text-gray-500 dark:text-gray-400">
                   <th className="p-4 font-semibold">Date</th>
                   <th className="p-4 font-semibold">Company</th>
                   <th className="p-4 font-semibold">Role</th>

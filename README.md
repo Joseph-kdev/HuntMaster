@@ -28,7 +28,7 @@ Microsoft Edge Add-ons Store Link: [HuntMaster](https://microsoftedge.microsoft.
 
 - **Secure & Private**  
   All data is stored **locally** in the browser — nothing is sent to external servers.  
-  Optional sync across your devices via browser sync.
+  Optional Firebase authentication is available from the dashboard. Job cloud sync is not enabled yet.
 
 - **Modern, Responsive UI**  
   Built with React, Vite, and Tailwind CSS — smooth hover effects, clean cards, dark/light mode support.
@@ -37,6 +37,16 @@ Microsoft Edge Add-ons Store Link: [HuntMaster](https://microsoftedge.microsoft.
   Click any job to view the full saved description or jump back to the original posting.
 
 ## Installation
+
+### Firebase authentication setup
+
+The dashboard authentication flow uses the Firebase project configured in `src/libs/fireConfig.js`.
+
+1. Set `VITE_FIREBASE_KEY` in `.env`.
+2. In Firebase Console, enable the **Email/Password** and **Google** sign-in providers under Authentication.
+3. Add the local development host and any extension host used for testing to Firebase Authentication's authorized domains when required.
+
+Authentication is optional. Signing in does not upload or synchronize job applications in this version; applications continue to use local extension storage.
 
 ### Microsoft Edge
 
@@ -53,8 +63,15 @@ cd job-tracker-extension
 # Install dependencies
 npm install
 
-# Start dev server with hot module replacement
+# Start the dashboard preview with hot module replacement
 npm run dev
+
+# Or preview a specific extension surface
+npm run dev:sidepanel
+
+# Preview URLs
+# Dashboard: http://127.0.0.1:5173/src/dashboard/index.html
+# Side panel: http://127.0.0.1:5173/src/sidepanel/index.html
 
 # Create production build (outputs to dist/)
 npm run build
