@@ -17,7 +17,7 @@ export default defineConfig((configEnv = {}) => {
   const manifest = defineManifest({
     manifest_version: 3,
     name: "HuntMaster",
-    version: "1.0.0",
+    version: "2.0.0",
     description: "Your trusted job hunting companion.",
     permissions: [
       "storage",

@@ -27,8 +27,7 @@ Microsoft Edge Add-ons Store Link: [HuntMaster](https://microsoftedge.microsoft.
   Quick access for scanning pages, manual entry, and viewing recent jobs without opening a full popup.
 
 - **Secure & Private**  
-  All data is stored **locally** in the browser — nothing is sent to external servers.  
-  Optional Firebase authentication is available from the dashboard. Job cloud sync is not enabled yet.
+  Jobs are stored locally for fast, offline use and are optionally synchronized to the signed-in user's Firebase account. Each user can access only their own cloud jobs.
 
 - **Modern, Responsive UI**  
   Built with React, Vite, and Tailwind CSS — smooth hover effects, clean cards, dark/light mode support.
@@ -46,7 +45,9 @@ The dashboard authentication flow uses the Firebase project configured in `src/l
 2. In Firebase Console, enable the **Email/Password** and **Google** sign-in providers under Authentication.
 3. Add the local development host and any extension host used for testing to Firebase Authentication's authorized domains when required.
 
-Authentication is optional. Signing in does not upload or synchronize job applications in this version; applications continue to use local extension storage.
+Authentication is optional. After sign-in, existing local applications are merged with cloud applications instead of being replaced. Conflicts use the newest `updatedAt` value, and deletions use cloud tombstones so stale offline copies cannot reappear. Local changes remain available when Firestore is offline and are retried during a later sync.
+
+Configure Firestore security rules from `firestore.rules` before deploying the extension. The rules allow access only when the authenticated Firebase user matches the user ID in the document path `users/{uid}/jobs/{jobId}`.
 
 ### Microsoft Edge
 
@@ -88,6 +89,7 @@ Load in Browser (Edge / Chrome):
 - React
 - Tailwind CSS
 - Browser Storage API
+- Firebase Authentication and Cloud Firestore
 
 ## Contributing
 

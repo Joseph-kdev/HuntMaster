@@ -1,5 +1,9 @@
+/* global chrome */
+
 import { useState } from "react";
 import { extractSkills } from "../libs/skillExtractor";
+import { auth } from "../libs/fireConfig";
+import { saveCloudJob, saveLocalJob } from "../services/storage";
 
 const SkillBadge = ({ label, color }) => (
   <span
@@ -103,7 +107,7 @@ export default function SidePanel() {
     try {
       const result = await extractSkills(jobDetails.description);
       setSkills(result);
-    } catch (error) {
+    } catch {
       setMessage("Failed AI analysis. Try again later");
     } finally {
       setAnalyzing(false);
@@ -113,21 +117,28 @@ export default function SidePanel() {
   const saveJob = async (e) => {
     e.preventDefault();
     try {
-      const result = await chrome.storage.local.get(["jobs"]);
-      const jobs = result.jobs || [];
       const descriptionToStore = skills ? skills.summary || "" : jobDetails.description;
       const newJob = {
         ...jobDetails,
         description: descriptionToStore,
         rawDescription: jobDetails.description,
         extractSkills: skills ?? null,
-        aiSkills: skills ?? null,
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       };
 
-      await chrome.storage.local.set({ jobs: [newJob, ...jobs] });
-      setMessage("Job saved successfully!");
+      const savedJob = await saveLocalJob(newJob);
+      if (auth.currentUser) {
+        try {
+          await saveCloudJob(auth.currentUser.uid, savedJob);
+          setMessage("Job saved and synced successfully!");
+        } catch (syncError) {
+          console.error("Cloud sync error:", syncError);
+          setMessage("Job saved locally. Cloud sync will retry after login.");
+        }
+      } else {
+        setMessage("Job saved locally. Log in on the dashboard to sync it.");
+      }
       setJobDetails({
         title: "",
         company: "",

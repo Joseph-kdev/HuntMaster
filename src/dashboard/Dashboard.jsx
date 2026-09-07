@@ -1,7 +1,40 @@
+/* global chrome */
+
 import { Eye, LogOut, Trash2, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import AuthPage from "./AuthPage";
 import { logOut, subscribeToAuth } from "../services/auth";
+import {
+  deleteLocalJob,
+  saveCloudJob,
+  saveCloudTombstone,
+  subscribeToCloudJobs,
+  syncJobs,
+  updateLocalJobs,
+} from "../services/storage";
+
+const applicationDateFormatter = new Intl.DateTimeFormat(undefined, {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+const formatApplicationDate = (value) => {
+  if (!value) {
+    return "Date unavailable";
+  }
+
+  const date =
+    typeof value?.toDate === "function"
+      ? value.toDate()
+      : typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? new Date(`${value}T00:00:00`)
+        : new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : applicationDateFormatter.format(date);
+};
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
@@ -10,8 +43,53 @@ export default function Dashboard() {
 
   const [selectedJob, setSelectedJob] = useState(null);
   const [jobToDelete, setJobToDelete] = useState(null);
+  const [syncState, setSyncState] = useState({ status: "idle", error: "" });
 
-  useEffect(() => subscribeToAuth(setUser), []);
+  useEffect(
+    () =>
+      subscribeToAuth((nextUser) => {
+        setUser(nextUser);
+        setSyncState(
+          nextUser
+            ? { status: "syncing", error: "" }
+            : { status: "idle", error: "" },
+        );
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    if (!user) {
+      return undefined;
+    }
+
+    let active = true;
+    syncJobs(user.uid)
+      .then(() => {
+        if (active) setSyncState({ status: "success", error: "" });
+      })
+      .catch((error) => {
+        console.error("Initial sync error:", error);
+        if (active) setSyncState({ status: "error", error: error.message });
+      });
+
+    const unsubscribe = subscribeToCloudJobs(
+      user.uid,
+      () =>
+        syncJobs(user.uid).catch((error) =>
+          console.error("Cloud update error:", error),
+        ),
+      (error) => {
+        console.error("Cloud listener error:", error);
+        if (active) setSyncState({ status: "error", error: error.message });
+      },
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [user]);
 
   useEffect(() => {
     // Fetch initial jobs
@@ -32,22 +110,47 @@ export default function Dashboard() {
     return () => chrome.storage.onChanged.removeListener(handleStorageChange);
   }, []);
 
-  const handleStatusChange = (jobId, newStatus) => {
+  const handleStatusChange = async (jobId, newStatus) => {
     const updatedJobs = jobs.map((job) =>
-      job.id === jobId ? { ...job, status: newStatus } : job,
+      job.id === jobId
+        ? { ...job, status: newStatus, updatedAt: new Date().toISOString() }
+        : job,
     );
     setJobs(updatedJobs);
-    chrome.storage.local.set({ jobs: updatedJobs });
+    await updateLocalJobs(updatedJobs);
+    if (user) {
+      const updatedJob = updatedJobs.find((job) => job.id === jobId);
+      try {
+        await saveCloudJob(user.uid, updatedJob);
+      } catch (error) {
+        console.error("Status sync error:", error);
+        setSyncState({
+          status: "error",
+          error: "Status saved locally but not synced.",
+        });
+      }
+    }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!jobToDelete) return;
     const newJobs = jobs.filter((j) => j.id !== jobToDelete.id);
     setJobs(newJobs);
-    chrome.storage.local.set({ jobs: newJobs });
+    const deletedAt = await deleteLocalJob(jobToDelete.id);
     setJobToDelete(null);
     if (selectedJob?.id === jobToDelete.id) {
       setSelectedJob(null);
+    }
+    if (user) {
+      try {
+        await saveCloudTombstone(user.uid, jobToDelete.id, deletedAt);
+      } catch (error) {
+        console.error("Delete sync error:", error);
+        setSyncState({
+          status: "error",
+          error: "Deleted locally but not synced.",
+        });
+      }
     }
   };
 
@@ -88,13 +191,14 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-8 font-sans">
       <div className="max-w-7xl mx-auto">
         <header className="mb-4 flex flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-grey-200">
-              HuntMaster Dashboard
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Track and manage your job applications.
-            </p>
+          <div className="flex gap-4">
+            <img src="/icon.png" alt="" width={50} className="rounded-md"/>
+            <div>
+              <h1 className="text-2xl font-bold text-grey-200">HuntMaster</h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Track and manage your job applications.
+              </p>
+            </div>
           </div>
           <div className="flex flex-col items-stretch sm:items-end">
             {user ? (
@@ -193,7 +297,7 @@ export default function Dashboard() {
                       className="hover:bg-gray-900 dark:hover:bg-gray-750"
                     >
                       <td className="p-4 text-sm text-gray-600 dark:text-gray-400">
-                        {job.date}
+                        {formatApplicationDate(job.date)}
                       </td>
                       <td className="p-4 font-medium">{job.company}</td>
                       <td className="p-4">
@@ -223,10 +327,12 @@ export default function Dashboard() {
                         </select>
                       </td>
                       <td className="p-4 text-xs text-gray-600 dark:text-gray-300">
-                        {job.aiSkills
-                          ? `${(job.aiSkills.technicalSkills?.length || 0) +
-                              (job.aiSkills.softSkills?.length || 0) +
-                              (job.aiSkills.niceToHave?.length || 0)} skills`
+                        {job.extractSkills
+                          ? `${
+                              (job.extractSkills.technicalSkills?.length || 0) +
+                              (job.extractSkills.softSkills?.length || 0) +
+                              (job.extractSkills.niceToHave?.length || 0)
+                            } skills`
                           : "None"}
                       </td>
                       <td className="p-4 flex gap-2">
@@ -251,6 +357,53 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {syncState.status !== "idle" && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-3">
+              {syncState.status === "syncing"
+                ? "Syncing your applications"
+                : syncState.status === "success"
+                  ? "Applications synced"
+                  : "Cloud sync needs attention"}
+            </h3>
+            <p className="mb-5 text-gray-600 dark:text-gray-400">
+              {syncState.status === "syncing"
+                ? "Merging your local applications with your cloud data..."
+                : syncState.status === "success"
+                  ? "Your local and cloud applications are now up to date."
+                  : syncState.error ||
+                    "Your local changes are saved and will be retried."}
+            </p>
+            {syncState.status === "error" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSyncState({ status: "syncing", error: "" });
+                  syncJobs(user.uid)
+                    .then(() => setSyncState({ status: "success", error: "" }))
+                    .catch((error) =>
+                      setSyncState({ status: "error", error: error.message }),
+                    );
+                }}
+                className="mr-3 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+              >
+                Retry
+              </button>
+            )}
+            {syncState.status !== "syncing" && (
+              <button
+                type="button"
+                onClick={() => setSyncState({ status: "idle", error: "" })}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                Continue
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {jobToDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -294,7 +447,7 @@ export default function Dashboard() {
               <div>
                 <h3 className="text-xl font-bold">{selectedJob.title}</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {selectedJob.company} • {selectedJob.date}
+                  {selectedJob.company} • {formatApplicationDate(selectedJob.date)}
                 </p>
               </div>
               <button
@@ -311,37 +464,39 @@ export default function Dashboard() {
                   "No description available for this job."}
               </div>
 
-              {selectedJob.aiSkills ? (
+              {selectedJob.extractSkills ? (
                 <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
                   <p className="text-sm font-semibold text-blue-700 dark:text-blue-200">
                     AI Extracted Skills
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    {selectedJob.aiSkills.summary}
+                    {selectedJob.extractSkills.summary}
                   </p>
                   <div className="mt-2 text-xs text-gray-700 dark:text-gray-200">
                     <div>
                       <strong>Experience Level:</strong>{" "}
-                      {selectedJob.aiSkills.experienceLevel || "Unknown"}
+                      {selectedJob.extractSkills.experienceLevel || "Unknown"}
                     </div>
                     <div>
                       <strong>Technical:</strong>{" "}
-                      {selectedJob.aiSkills.technicalSkills?.join(", ") || "—"}
+                      {selectedJob.extractSkills.technicalSkills?.join(", ") ||
+                        "—"}
                     </div>
                     <div>
                       <strong>Soft:</strong>{" "}
-                      {selectedJob.aiSkills.softSkills?.join(", ") || "—"}
+                      {selectedJob.extractSkills.softSkills?.join(", ") || "—"}
                     </div>
                     <div>
                       <strong>Nice to Have:</strong>{" "}
-                      {selectedJob.aiSkills.niceToHave?.join(", ") || "—"}
+                      {selectedJob.extractSkills.niceToHave?.join(", ") || "—"}
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    No AI skills extracted for this job. Stored description is shown above.
+                    No AI skills extracted for this job. Stored description is
+                    shown above.
                   </p>
                 </div>
               )}
